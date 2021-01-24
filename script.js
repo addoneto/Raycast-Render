@@ -23,7 +23,7 @@ function start() {
         martix.length * tile / 2 + tile / 2,
         0,
         2,
-        70
+        1
     );
 }
 
@@ -123,8 +123,73 @@ function Ray(_x, _y, _angle) {
     }
 
     this.cast = function () {
+        noStroke();
+
+        //#region HORIZONTAL LINE CHECK
+
+        const lookingUp = this.angle < 180;
+
+        // fisrt horizontal line index that intersect with the ray
+        let hy = lookingUp ? Math.floor(this.pos.y / tile) : Math.ceil(this.pos.y / tile);
+        // convert line index to actual world pos
+        hy *= tile;
+
+        // fill('#eb9a44'); circle(this.pos.x, hy, 5);
+
+        // height/radius of the trigonometric circle
+        let h = Math.abs(this.pos.y - hy);
+
+        // intersect point x
+        let ix = lookingUp ? 1 / tan(this.angle) : -1 / tan(this.angle);
+        /* resize ix to fit the circle of radius h */ ix *= h;
+        /* tranlade the point relative to player x */ ix += this.pos.x;
+
+        // fill('#d6b541'); circle(ix, hy, 5);
+
+        // oposite horizontal line y
+        let ohy = lookingUp ? hy + tile : hy - tile;
+
+        // big triangle Right Angle Point
+        // fill('#6dcf55'); circle(ix, ohy, 5);
+
+        // oposite horizontal line intersection x point
+            // using tangent (basiclly the opposite of ix [ix * -1] )
+            //let opix = -1 / tan(this.angle) * h + this.pos.x;
+
+            // using triangle similarity
+            let dx = this.pos.x - ix; // distance between ix and player x
+            // the number can be negative, 'cause in these cases the point is in the left of the player
+            
+            // tile / radius [h] = opx / dx --> opx = tile * dx / h
+            let opiCathetusLength = tile * dx / h;
+            let opix = ix + opiCathetusLength;
+
+        // fill('#af55cf'); circle(opix, ohy, 5);
+
+        let xOffset = opiCathetusLength;
+        let yOffset = tile;
+
+        for(let i = 0; i < 8; i++) {
+            const xPos = ix - xOffset * i,
+            yPos = lookingUp ? hy - yOffset * i : hy + yOffset * i;
+
+            const xBoardIndex = Math.floor(xPos / tile);
+            let yBoardIndex =  Math.floor(yPos / tile);
+            if(lookingUp) yBoardIndex -= 1;
+
+            // ray collided
+            if(martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1){
+                this.draw(xPos, yPos);
+                return;
+            }
+
+            // fill('#d6b541'); circle(xPos, yPos, 5);
+        }
+
+        //#endregion
+
         this.draw(this.pos.x + this.dir.x * canvas.width,
-            this.pos.y + this.dir.y * canvas.width)
+            this.pos.y + this.dir.y * canvas.width);
     }
 }
 
