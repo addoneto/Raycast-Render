@@ -109,108 +109,32 @@ class Ray {
     cast() {
         // HORIZONTAL LINES
 
-        let angle = this.angle;
-
         let yPoint
 
-        if (angle < 180) { // LOOKING UP
-            // find the closest point from `this.pos.y` to an horizontal line
-            // since looking up use `Math.floor` not `Math.round`
-            yPoint = Math.floor(this.position.y / tileSize) * tileSize;
-        } else {
-            // if looking down check the closest point from `this.pos.y` to an horizontal line !after the player
-            yPoint = Math.ceil(this.position.y / tileSize) * tileSize;
-        }
+        if (this.angle < 180) yPoint = Math.floor(this.position.y / tileSize) * tileSize; // LOOKING UP
+        else yPoint = Math.ceil(this.position.y / tileSize) * tileSize; 
 
         noStroke(); fill('purple'); circle(this.position.x, yPoint, 5);
 
-        // now find the x point where the ray intersects on the line on y `yPoint`
-
-        // distance between player position and `yPoint`
-        // since looking up yPoint will alwways be > than this.position.y
-        // so it should come first to prevent negative values
         let h = yPoint - this.position.y;
 
+        noFill(); stroke(2, 'gray');
+        circle(this.position.x, this.position.y, Math.abs(h));
+        noStroke();
+
+        let tangent = -1 / tan(angle) * h;
+
+        fill('blue');
+        circle(tangent + this.position.x, this.position.y, 5);
+
         // why ? ? ? ? ?
-        let inverseTangent = -1 / tan(angle);
-        let xPoint = h * inverseTangent;
+        //let inverseTangent = 1 / tan(angle);
+        //let xPoint = h * inverseTangent;
 
         // xPoint is pased on the [0, 0] point, so to make it relative to the player position we should add its x pos
-        xPoint += this.position.x;
+        //xPoint += this.position.x;
 
-        fill('blue'); circle(xPoint, yPoint, 5);
-
-        // now we need to find the triangle inseted into the grid cell that we'll use as ofset for the next points
-        // we already have one point of this triangle, xPoint
-        // the other one is  xPoint but in the other horizontal side of the grid the player is in
-        // if looking up the side is xPoint + tileSide else xPoint - tileSide
-        let offsetTriangleRightAngleSide = yPoint < this.position.y ? yPoint + tileSize : yPoint - tileSize;
-
-        fill('green'); circle(xPoint, offsetTriangleRightAngleSide, 5);
-
-        // one of the cathetus is simply tileSide, but we need the other one to calculate the final point
-        // now to discover the other cathetus of this `Offset Triangle` we need its angle that is equal to the ray angle
-        // so the cos of this angle is this cathetus
-
-        //let secondCathetusSide = cos(angle);
-
-        // multiply by the radius of the trigonometric circle
-        // but it radius is = to the hipotenus os the triangle
-        // we have one side (one cathetus) and three angle
-
-        //let tirdAngle = 180 - (angle + 90);
-
-        // one way to avoid the cosine and calculating the hipotenuse if to use triangle similarity
-        // since we have one of the cathetus side (offsetTriangleRightAngleSide) we can compare it with the initial ray triangle
-        // the big triangle cathetus side is = ( yPoint - offsetTriangleRightAngleSide )
-        let bigCathetus = yPoint - offsetTriangleRightAngleSide;
-        // the small one is = h
-        // the smail triangle down cathetus is = this.position.x - xPoint
-        let smallDownCathetus = this.position.x - xPoint;
-        // the relation ship is bigCathetus / h = x / smallDownCathetus
-        // x = bigCathetus / h * smallDownCathetus
-
-        let secondCathetusSide = bigCathetus / h * smallDownCathetus;
-
-        // the final point is the `xPoint` - `secondCathetusSide`
-        let offsetTriangleOpositePoint = xPoint + secondCathetusSide;
-
-        fill('cyan'); circle(offsetTriangleOpositePoint, offsetTriangleRightAngleSide, 5);
-
-        // YOU CAN ALSO CAST RAY OPOSITE TO THE CURRENT AND DISCOVER WERE IT INTERSECTS WITH THE OPPOSITE HORIZONTAL LINE
-
-        // now we need to check the squares along the ray and if it intersecs with a wall tile
-        // to do that we define a offset based on the triangle we calculated
-
-        // if point up offset should be negative
-        let xOffset = yPoint < this.position.y ? -secondCathetusSide : secondCathetusSide;
-        let yOffset = yPoint < this.position.y ? -tileSize: tileSize;
-
-        //let topTrianglePoint = new Vector2(offsetTriangleOpositePoint, offsetTriangleRightAngleSide);
-
-        for (let i = 0; i < martix[0].length; i++) {
-            const boardIndexX = Math.floor( (xPoint + xOffset * i) / tileSize);
-            let boardIndexY = Math.floor( (yPoint + yOffset * i) / tileSize);
-
-            if(yPoint < this.position.y) boardIndexY -= 1;
-            else boardIndexY += 1;
-
-            const boardGlobalPosX = boardIndexX * tileSize;
-            const boardGlobalPosY = boardIndexY * tileSize;
-
-            try{
-                let tile = martix[boardIndexY][boardIndexX];
-
-                if (tile !== 1) fill('rgba(0,255,0,0.1)');
-                else fill('rgba(255,0,0,0.1)');
-
-                rect(boardGlobalPosX, boardGlobalPosY, tileSize, tileSize);
-
-                if (tile === 1) {
-                    return this.draw(xPoint + xOffset * i, yPoint + yOffset * i);
-                }
-            }catch(err){}
-        }
+        //fill('blue'); circle(xPoint, yPoint, 5);
 
         return this.draw(this.position.x + this.direction.x * canvas.width, this.position.y + this.direction.y * canvas.width);
     }
