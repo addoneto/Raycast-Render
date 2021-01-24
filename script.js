@@ -27,14 +27,14 @@ function start() {
     );
 }
 
-function update(){
+function update() {
     background("#232020");
 
     drawBoard();
     p.update();
 }
 
-function drawBoard(){
+function drawBoard() {
     stroke(5, 'gray');
     line(martix[0].length * tile, 0, martix[0].length * tile, martix.length * tile);
 
@@ -65,10 +65,10 @@ function Player(_x, _y, _a, _v, _f) {
         this.rays.push(new Ray(this.pos.x, this.pos.y, i + this.angle));
     }
 
-    this.changeAngle = function(x){
+    this.changeAngle = function (x) {
         this.angle += x;
-        if(this.angle > 360) this.angle = 1;
-        if(this.angle < 0) this.angle = 359;
+        if (this.angle > 360) this.angle = 1;
+        if (this.angle < 0) this.angle = 359;
     }
 
     this.setDir = function (_xD, _yD) {
@@ -77,8 +77,8 @@ function Player(_x, _y, _a, _v, _f) {
 
         //this.dir.Normalize();
         const mag = Math.sqrt(this.dir.x ** 2 + this.dir.y ** 2);
-        if(mag === 0) return;
-        
+        if (mag === 0) return;
+
         this.dir.x /= mag;
         this.dir.y /= mag;
     }
@@ -98,7 +98,7 @@ function Player(_x, _y, _a, _v, _f) {
         circle(this.pos.x, this.pos.y, 10);
     }
 
-    this.castRays = function(){
+    this.castRays = function () {
         for (let i = 0; i < this.fov; i++) {
             this.rays[i].update(this.pos.x, this.pos.y, i - this.fov / 2 + this.angle);
             this.rays[i].cast();
@@ -159,7 +159,7 @@ function Ray(_x, _y, _angle) {
             // using triangle similarity
             let dx = this.pos.x - ix; // distance between ix and player x
             // the number can be negative, 'cause in these cases the point is in the left of the player
-            
+
             // tile / radius [h] = opx / dx --> opx = tile * dx / h
             let opiCathetusLength = tile * dx / h;
             let opix = ix + opiCathetusLength;
@@ -169,27 +169,79 @@ function Ray(_x, _y, _angle) {
         let xOffset = opiCathetusLength;
         let yOffset = tile;
 
+        // for(let i = 0; i < 8; i++) {
+        //     const xPos = ix - xOffset * i,
+        //     yPos = lookingUp ? hy - yOffset * i : hy + yOffset * i;
+
+        //     const xBoardIndex = Math.floor(xPos / tile);
+        //     let yBoardIndex =  Math.floor(yPos / tile);
+        //     if(lookingUp) yBoardIndex -= 1;
+
+        //     //fill('#d6b541'); circle(xPos, yPos, 5);
+
+        //     // ray collided
+        //     if(martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1){
+        //         this.draw(xPos, yPos);
+        //         return;
+        //     }
+
+        // }
+
+        //#endregion
+
+        //#region VERTICAL LINE CHECK
+
+        const lookingRight = this.angle < 90 || this.angle > 270;
+
+        // fisrt vertical line index that intersect with the ray
+        let vx = lookingRight ? Math.ceil(this.pos.x / tile) : Math.floor(this.pos.x / tile);
+        // convert line index to actual world pos
+        vx *= tile;
+
+        // fill('#eb9a44'); circle(vx, this.pos.y, 5);
+
+        // vertical height/radius of the trigonometric circle
+        let vh = Math.abs(this.pos.x - vx);
+
+        // intersect point y
+        let iy = lookingRight ? -tan(this.angle) : tan(this.angle);
+        /* resize ix to fit the circle of radius h */ iy *= vh;
+        /* tranlade the point relative to player x */ iy += this.pos.y;
+
+        // fill('#d6b541'); circle(vx, iy, 5);
+
+        // find the Big Triangle Right Angle Point
+        // fill('#6dcf55'); circle(vx, ohy, 5);
+
+        let dy = iy - this.pos.y;
+        dx = vx - this.pos.x;
+
+        let yCathetusLength = tile / dx * dy;
+
+        xOffset = tile;
+        yOffset = yCathetusLength;
+
         for(let i = 0; i < 8; i++) {
-            const xPos = ix - xOffset * i,
-            yPos = lookingUp ? hy - yOffset * i : hy + yOffset * i;
+            const xPos = lookingRight ? vx + xOffset * i: vx - xOffset * i,
+            yPos = lookingRight ? iy + yOffset * i : iy - yOffset * i;
 
-            const xBoardIndex = Math.floor(xPos / tile);
-            let yBoardIndex =  Math.floor(yPos / tile);
-            if(lookingUp) yBoardIndex -= 1;
+            let xBoardIndex = Math.floor(xPos / tile);
+            const yBoardIndex =  Math.floor(yPos / tile);
+            if(!lookingRight) xBoardIndex -= 1;
 
-            // ray collided
+            fill('#d6b541'); circle(xPos, yPos, 5);
+
+            //fill('rgba(215, 91, 91, 0.1)'); rect(xBoardIndex * tile, yBoardIndex * tile, tile, tile);
+
             if(martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1){
                 this.draw(xPos, yPos);
                 return;
             }
-
-            // fill('#d6b541'); circle(xPos, yPos, 5);
         }
 
         //#endregion
 
-        this.draw(this.pos.x + this.dir.x * canvas.width,
-            this.pos.y + this.dir.y * canvas.width);
+        this.draw(this.pos.x + this.dir.x * canvas.width, this.pos.y + this.dir.y * canvas.width);
     }
 }
 
