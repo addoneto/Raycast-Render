@@ -113,8 +113,10 @@ function Player(_x, _y, _a, _v, _f) {
         if(this.rayStrips >= this.fov * raysPerAngle) this.rayStrips = 0;
 
         // TODO: fix fish eye
-        // let a = rayAngle - this.angle;
-        // let fixedDist = rayDist * cos(a);
+        // cos(angle) = correct distance / distorted distance
+        // correct distance = distorted distance * cos(angle)
+        // let correctDistance = rayDist * cos(rayAngle);
+        // rayDist = correctDistance;
     
         let height = map(rayDist , 0, 750, canvas.height / 1.5, 0);
         let color = map(rayDist  , 0, 750, 255, 0);
@@ -124,7 +126,7 @@ function Player(_x, _y, _a, _v, _f) {
 
         const stripWidth = (canvas.width / 2 / (this.fov * raysPerAngle) );
         
-        rect(canvas.width / 2 + this.rayStrips * stripWidth,
+        rect(canvas.width - (this.rayStrips * stripWidth),
             (canvas.height - height) / 2,
             stripWidth, height);
 
