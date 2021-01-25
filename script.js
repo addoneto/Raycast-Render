@@ -12,6 +12,8 @@ const martix = [
 const tile = 100;
 let p;
 
+const raysPerAngle = 5; // CONTROLL THE DETAIL
+
 function start() {
     createCanvas(martix[0].length * tile * 2, martix.length * tile);
 
@@ -19,11 +21,11 @@ function start() {
     py = martix.length * tile / 2 + tile / 2;
 
     p = new Player(
-        martix[0].length * tile / 2,
+        martix[0].length * tile / 2 + tile / 2,
         martix.length * tile / 2 + tile / 2,
         0,
         2,
-        1
+        70
     );
 }
 
@@ -60,9 +62,10 @@ function Player(_x, _y, _a, _v, _f) {
     this.dir = new Vector2(0, 0);
 
     this.rays = [];
+    this.rayStrips = 0; // heights array
 
-    for (let i = -(this.fov / 2); i < this.fov / 2; i++) {
-        this.rays.push(new Ray(this.pos.x, this.pos.y, i + this.angle));
+    for (let i = 0; i < this.fov * raysPerAngle; i++) {
+        this.rays.push(new Ray(this.pos.x, this.pos.y, -(this.fov / 2) + (i / raysPerAngle) + this.angle ));
     }
 
     this.changeAngle = function (x) {
@@ -99,10 +102,33 @@ function Player(_x, _y, _a, _v, _f) {
     }
 
     this.castRays = function () {
-        for (let i = 0; i < this.fov; i++) {
-            this.rays[i].update(this.pos.x, this.pos.y, i - this.fov / 2 + this.angle);
+        for (let i = 0; i < this.fov * raysPerAngle; i++) {
+            this.rays[i].update(this.pos.x, this.pos.y, -(this.fov / 2) + (i / raysPerAngle) + this.angle);
             this.rays[i].cast();
         }
+    }
+
+    this.addSceneStrip = function (rayDist, rayAngle) {
+        
+        if(this.rayStrips >= this.fov * raysPerAngle) this.rayStrips = 0;
+
+        // TODO: fix fish eye
+        // let a = rayAngle - this.angle;
+        // let fixedDist = rayDist * cos(a);
+    
+        let height = map(rayDist , 0, 750, canvas.height / 1.5, 0);
+        let color = map(rayDist  , 0, 750, 255, 0);
+        
+        noStroke();
+        fill(`rgb(${color}, ${color}, ${color})`);
+
+        const stripWidth = (canvas.width / 2 / (this.fov * raysPerAngle) );
+        
+        rect(canvas.width / 2 + this.rayStrips * stripWidth,
+            (canvas.height - height) / 2,
+            stripWidth, height);
+
+        this.rayStrips++;
     }
 }
 
@@ -118,12 +144,18 @@ function Ray(_x, _y, _angle) {
         this.dir = Vector2.angleToDirection(this.angle);
     }
 
-    this.draw = function (finalX, finalY) {
-        stroke(3, '#d75b5b'); line(this.pos.x, this.pos.y, finalX, finalY);
+    this.draw = function (finalX, finalY, dist, angle) {
+        stroke(2, '#d75b5b'); line(this.pos.x, this.pos.y, finalX, finalY);
+
+        // 3D 'Render'
+        p.addSceneStrip(dist, angle);
     }
 
     this.cast = function () {
         noStroke();
+
+        let hRayDist = 10000, hPx, hPy;
+        let vRayDist = 10000, vPx, vPy;
 
         //#region HORIZONTAL LINE CHECK
 
@@ -169,23 +201,24 @@ function Ray(_x, _y, _angle) {
         let xOffset = opiCathetusLength;
         let yOffset = tile;
 
-        // for(let i = 0; i < 8; i++) {
-        //     const xPos = ix - xOffset * i,
-        //     yPos = lookingUp ? hy - yOffset * i : hy + yOffset * i;
+        for (let i = 0; i < 8; i++) {
+            const xPos = ix - xOffset * i,
+                yPos = lookingUp ? hy - yOffset * i : hy + yOffset * i;
 
-        //     const xBoardIndex = Math.floor(xPos / tile);
-        //     let yBoardIndex =  Math.floor(yPos / tile);
-        //     if(lookingUp) yBoardIndex -= 1;
+            const xBoardIndex = Math.floor(xPos / tile);
+            let yBoardIndex = Math.floor(yPos / tile);
+            if (lookingUp) yBoardIndex -= 1;
 
-        //     //fill('#d6b541'); circle(xPos, yPos, 5);
+            // fill('#d6b541'); circle(xPos, yPos, 5);
 
-        //     // ray collided
-        //     if(martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1){
-        //         this.draw(xPos, yPos);
-        //         return;
-        //     }
+            // ray collided
+            if (martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1) {
+                hRayDist = this.length(xPos, yPos);
+                hPx = xPos; hPy = yPos;
+                break;
+            }
 
-        // }
+        }
 
         //#endregion
 
@@ -221,28 +254,44 @@ function Ray(_x, _y, _angle) {
         xOffset = tile;
         yOffset = yCathetusLength;
 
-        for(let i = 0; i < 8; i++) {
-            const xPos = lookingRight ? vx + xOffset * i: vx - xOffset * i,
-            yPos = lookingRight ? iy + yOffset * i : iy - yOffset * i;
+        for (let i = 0; i < 8; i++) {
+            const xPos = lookingRight ? vx + xOffset * i : vx - xOffset * i,
+                yPos = lookingRight ? iy + yOffset * i : iy - yOffset * i;
 
             let xBoardIndex = Math.floor(xPos / tile);
-            const yBoardIndex =  Math.floor(yPos / tile);
-            if(!lookingRight) xBoardIndex -= 1;
+            const yBoardIndex = Math.floor(yPos / tile);
+            if (!lookingRight) xBoardIndex -= 1;
 
-            fill('#d6b541'); circle(xPos, yPos, 5);
+            // fill('#d6b541'); circle(xPos, yPos, 5);
 
-            //fill('rgba(215, 91, 91, 0.1)'); rect(xBoardIndex * tile, yBoardIndex * tile, tile, tile);
+            // fill('rgba(215, 91, 91, 0.1)'); rect(xBoardIndex * tile, yBoardIndex * tile, tile, tile);
 
-            if(martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1){
-                this.draw(xPos, yPos);
-                return;
+            if (martix[yBoardIndex] && martix[yBoardIndex][xBoardIndex] === 1) {
+                vRayDist = this.length(xPos, yPos);
+                vPx = xPos; vPy = yPos;
+
+                break;
             }
         }
 
         //#endregion
 
-        this.draw(this.pos.x + this.dir.x * canvas.width, this.pos.y + this.dir.y * canvas.width);
+        // stroke(10, 'green'); line(this.pos.x, this.pos.y, hPx, hPy);
+        // stroke(3, 'blue'); line(this.pos.x, this.pos.y, vPx, vPy);
+
+        // Choose the shortest ray line
+        
+        //console.log('Horizontal line: ' + hRayDist +  ' x ' + 'Vertical line: ' + vRayDist);
+        if(hRayDist <= vRayDist) this.draw(hPx, hPy, hRayDist, this.angle);
+        else this.draw(vPx, vPy,vRayDist);
+
+        //this.draw(this.pos.x + this.dir.x * canvas.width, this.pos.y + this.dir.y * canvas.width);
     }
+
+    this.length = function (finalX, finalY) {
+        //return Math.sqrt(this.pos.x - finalX ** 2 + this.pos.y - finalY ** 2);
+        return Math.sqrt((this.pos.x - finalX) * (this.pos.x - finalX) + (this.pos.y - finalY) * (this.pos.y - finalY));
+    }   
 }
 
 function keyDown(key) {
